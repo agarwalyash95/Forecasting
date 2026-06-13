@@ -3,6 +3,7 @@ LangGraph tool definitions for the RetailIQ chatbot agent.
 Each tool queries the forecasting engine and returns structured data.
 """
 import json
+import logging
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 from forecasting.engine import (
