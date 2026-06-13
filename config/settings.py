@@ -127,9 +127,9 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8000',
 ]
 
-# ─── Groq LLM ─────────────────────────────────────────────────────────────────
-GROQ_API_KEY = config('GROQ_API_KEY', default='')
-GROQ_MODEL = config('GROQ_MODEL', default='llama-3.3-70b-versatile')
+# ─── Gemini LLM ─────────────────────────────────────────────────────────────────
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.1-pro-preview')
 
 # ─── ML Models ────────────────────────────────────────────────────────────────
 ML_MODEL_DIR = BASE_DIR / 'forecasting' / 'trained_models'
