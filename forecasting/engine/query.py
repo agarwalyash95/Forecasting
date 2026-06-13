@@ -117,10 +117,10 @@ def forecast_demand(product_name: str, horizon: int = 30) -> dict:
     except Product.MultipleObjectsReturned:
         product = Product.objects.filter(name__icontains=product_name, is_active=True).first()
 
-    # Try Prophet
-    from forecasting.engine.prophet_model import get_or_train_prophet
-    pm = get_or_train_prophet(product)
-    if pm.is_trained:
+    # Try Prophet (Load only, do not train synchronously to avoid timeouts)
+    from forecasting.engine.prophet_model import ProphetDemandModel
+    pm = ProphetDemandModel(product.id)
+    if pm.load():
         predictions = pm.predict(horizon)
         chart_config = pm.get_chart_config(horizon)
         if predictions:
@@ -176,8 +176,9 @@ def get_items_running_out(days: int = 14) -> list:
             })
             continue
 
-        pm = get_or_train_prophet(product)
-        if not pm.is_trained:
+        from forecasting.engine.prophet_model import ProphetDemandModel
+        pm = ProphetDemandModel(product.id)
+        if not pm.load():
             continue
 
         predictions = pm.predict(days)

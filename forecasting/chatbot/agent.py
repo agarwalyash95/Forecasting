@@ -128,9 +128,9 @@ def _extract_chart_config(user_message: str) -> Optional[dict]:
         products = Product.objects.filter(is_active=True)
         for product in products:
             if product.name.lower() in user_message.lower():
-                from forecasting.engine.prophet_model import get_or_train_prophet
-                pm = get_or_train_prophet(product)
-                if pm.is_trained:
+                from forecasting.engine.prophet_model import ProphetDemandModel
+                pm = ProphetDemandModel(product.id)
+                if pm.load():
                     return pm.get_chart_config(min(horizon, 90))
     except Exception:
         pass
