@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — RetailIQ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'forecasting/css/styles.css' %}" />
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="login-logo-icon">📊</span>
+      <div class="login-logo-brand">RetailIQ</div>
+      <div class="login-logo-sub">AI-Powered Demand Forecasting Platform</div>
+    </div>
+
+    {% if error %}
+    <div class="error-msg">⚠️ {{ error }}</div>
+    {% endif %}
+    {% if message %}
+    <div class="error-msg" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">✅ {{ message }}</div>
+    {% endif %}
+
+    <form method="post" action="{% url 'login_page' %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" name="username" placeholder="Enter your username" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn-primary" id="btn-login">Sign In →</button>
+    </form>
+
+    <p class="login-hint">
+      Default credentials: <strong>admin</strong> / <strong>admin123</strong><br/>
+      Run <code>python manage.py seed_data</code> to create the default account.
+    </p>
+
+    <p class="login-hint" style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+      Need an account? <a href="{% url 'register_page' %}" style="color: var(--primary-light);">Register here</a>.
+    </p>
+  </div>
+</div>
+</body>
+</html>

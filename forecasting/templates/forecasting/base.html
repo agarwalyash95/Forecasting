@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}RetailIQ — Demand Forecasting{% endblock %}</title>
+  <meta name="description" content="AI-powered retail inventory demand forecasting chatbot for store managers" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <!-- Marked.js (for markdown rendering) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="{% static 'forecasting/css/styles.css' %}" />
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📊</div>
+      <div class="logo-text">
+        <span class="logo-brand">RetailIQ</span>
+        <span class="logo-sub">Demand Forecasting</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" id="nav-dashboard">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Dashboard</span>
+      </a>
+      <a href="{% url 'chatbot' %}" class="nav-item {% if request.resolver_match.url_name == 'chatbot' %}active{% endif %}" id="nav-chatbot">
+        <span class="nav-icon">🤖</span>
+        <span class="nav-label">AI Chatbot</span>
+      </a>
+      {% if request.user.is_staff %}
+      <a href="/admin/" class="nav-item" id="nav-admin" target="_blank">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Admin Panel</span>
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">{{ request.user.username|first|upper }}</div>
+        <div class="user-details">
+          <span class="user-name">{{ request.user.username }}</span>
+          <span class="user-role">
+            {% if request.user.is_superuser %}Administrator{% else %}Store Manager{% endif %}
+          </span>
+        </div>
+      </div>
+      <a href="{% url 'logout' %}" class="logout-btn" id="btn-logout" title="Logout">↩</a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

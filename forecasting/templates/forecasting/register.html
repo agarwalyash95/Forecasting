@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register — RetailIQ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'forecasting/css/styles.css' %}" />
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="login-logo-icon">📊</span>
+      <div class="login-logo-brand">RetailIQ</div>
+      <div class="login-logo-sub">Register for Chatbot Access</div>
+    </div>
+
+    {% if error %}
+    <div class="error-msg">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="{% url 'register_page' %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" name="username" placeholder="Choose a username" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input class="form-input" type="email" id="email" name="email" placeholder="Enter your email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" name="password" placeholder="Create a password" required />
+      </div>
+      <button type="submit" class="btn-primary" id="btn-register">Register Account →</button>
+    </form>
+
+    <p class="login-hint" style="margin-top: 1.5rem; text-align: center;">
+      Already have an account? <a href="{% url 'login_page' %}" style="color: var(--primary-light);">Sign in here</a>.
+    </p>
+  </div>
+</div>
+</body>
+</html>

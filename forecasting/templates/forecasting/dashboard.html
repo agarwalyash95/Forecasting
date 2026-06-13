@@ -1,0 +1,314 @@
+{% extends 'forecasting/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard — RetailIQ{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+  <div class="page-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h1 class="page-title">📊 Analytics Dashboard</h1>
+        <p class="page-subtitle">Live sales insights & inventory health — Last 30 days</p>
+      </div>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <span id="last-sync" class="text-muted" style="font-size:0.8rem;"></span>
+        <button class="sync-btn" id="btn-sync-inventory" onclick="syncInventory()">⚡ Sync Inventory</button>
+        <a href="{% url 'chatbot' %}" class="btn-primary" style="text-decoration:none;padding:0.5rem 1rem;border-radius:8px;font-size:0.85rem;display:inline-block;width:auto;">🤖 Ask AI</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <span class="kpi-icon">💰</span>
+      <div class="kpi-value" id="kpi-revenue">—</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-change up" id="kpi-revenue-change">Loading...</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-icon">📦</span>
+      <div class="kpi-value" id="kpi-qty">—</div>
+      <div class="kpi-label">Units Sold</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-icon">🛒</span>
+      <div class="kpi-value" id="kpi-orders">—</div>
+      <div class="kpi-label">Total Orders</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-icon">🏷️</span>
+      <div class="kpi-value" id="kpi-products">—</div>
+      <div class="kpi-label">Active Products</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-icon">🔔</span>
+      <div class="kpi-value text-red" id="kpi-alerts">—</div>
+      <div class="kpi-label">Active Alerts</div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1 -->
+  <div class="charts-grid">
+    <div class="chart-card wide">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Revenue Trend</div>
+          <div class="chart-subtitle">Daily revenue over the selected period</div>
+        </div>
+        <div class="chart-actions">
+          <button class="btn-period active" onclick="loadRevenueTrend(7, this)" id="btn-7d">7D</button>
+          <button class="btn-period" onclick="loadRevenueTrend(30, this)" id="btn-30d">30D</button>
+          <button class="btn-period" onclick="loadRevenueTrend(90, this)" id="btn-90d">90D</button>
+        </div>
+      </div>
+      <canvas id="revenueChart" height="90"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Top Products</div>
+          <div class="chart-subtitle">By units sold (30 days)</div>
+        </div>
+      </div>
+      <canvas id="topProductsChart" height="220"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Category Distribution</div>
+          <div class="chart-subtitle">Sales share by category</div>
+        </div>
+      </div>
+      <canvas id="categoryChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Pending Users Panel (Admin Only) -->
+  {% if pending_users %}
+  <p class="section-title">👥 Pending User Approvals</p>
+  <div class="alerts-panel" style="margin-bottom: 2rem;">
+    <div class="alerts-header">
+      <span class="alerts-title">New Registrations</span>
+      <span class="alert-badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">{{ pending_users|length }} Pending</span>
+    </div>
+    <div>
+      {% for u in pending_users %}
+      <div class="alert-item" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div class="alert-dot warning"></div>
+          <div>
+            <div class="alert-product">{{ u.username }}</div>
+            <div class="alert-msg">{{ u.email|default:"No email provided" }}</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <a href="{% url 'approve_user' u.id %}" class="btn-primary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: #10b981;">Approve</a>
+          <a href="{% url 'reject_user' u.id %}" class="btn-primary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: #94a3b8;">Reject</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Alerts Panel -->
+  <p class="section-title">⚠️ Active Stock Alerts</p>
+  <div class="alerts-panel">
+    <div class="alerts-header">
+      <span class="alerts-title">Inventory Alerts</span>
+      <span class="alert-badge badge-critical" id="alert-count">Loading...</span>
+    </div>
+    <div id="alerts-list">
+      <div class="no-alerts"><div class="spinner"></div> Loading alerts...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const AUTH_TOKEN = '{{ auth_token }}';
+
+function apiGet(url) {
+  return fetch(url, { headers: { 'Authorization': `Token ${AUTH_TOKEN}` } }).then(r => r.json());
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+async function loadKPIs() {
+  const data = await apiGet('/api/kpis/?days=30');
+  document.getElementById('kpi-revenue').textContent = '₹' + data.total_revenue.toLocaleString('en-IN');
+  document.getElementById('kpi-qty').textContent = data.total_quantity.toLocaleString();
+  document.getElementById('kpi-orders').textContent = data.total_orders.toLocaleString();
+  document.getElementById('kpi-products').textContent = data.total_products;
+  document.getElementById('kpi-alerts').textContent = data.active_alerts;
+  document.getElementById('kpi-revenue-change').textContent = `Last ${data.period_days} days`;
+}
+
+// ── Revenue Chart ─────────────────────────────────────────────────────────────
+let revenueChart;
+async function loadRevenueTrend(days = 7, btn = null) {
+  if (btn) {
+    document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const data = await apiGet(`/api/trend/revenue/?days=${days}`);
+  const labels = data.map(d => d.date);
+  const values = data.map(d => d.revenue);
+
+  if (revenueChart) revenueChart.destroy();
+
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(99,102,241,0.35)');
+  gradient.addColorStop(1, 'rgba(99,102,241,0)');
+
+  revenueChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Revenue (₹)',
+        data: values,
+        borderColor: '#6366f1',
+        backgroundColor: gradient,
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointRadius: days <= 7 ? 4 : 2,
+        pointBackgroundColor: '#6366f1',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => '₹' + ctx.parsed.y.toLocaleString('en-IN')
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', maxTicksLimit: 10 } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', callback: v => '₹' + v.toLocaleString('en-IN') } }
+      }
+    }
+  });
+}
+
+// ── Top Products ──────────────────────────────────────────────────────────────
+async function loadTopProducts() {
+  const data = await apiGet('/api/products/top/?days=30&limit=8');
+  const ctx = document.getElementById('topProductsChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.product.length > 15 ? d.product.slice(0,15)+'…' : d.product),
+      datasets: [{
+        label: 'Units Sold',
+        data: data.map(d => d.total_quantity),
+        backgroundColor: data.map((_, i) => `hsla(${245 + i*15}, 70%, ${55 + i*3}%, 0.75)`),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b' } },
+        y: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ── Category Chart ────────────────────────────────────────────────────────────
+async function loadCategoryChart() {
+  const data = await apiGet('/api/categories/analysis/?days=30');
+  const colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#06b6d4','#84cc16'];
+  const ctx = document.getElementById('categoryChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.map(d => d.category),
+      datasets: [{
+        data: data.map(d => d.total_quantity),
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: '#131d35',
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed.toLocaleString()} units` } }
+      }
+    }
+  });
+}
+
+// ── Alerts ────────────────────────────────────────────────────────────────────
+async function loadAlerts() {
+  const data = await apiGet('/api/alerts/');
+  const list = document.getElementById('alerts-list');
+  const count = document.getElementById('alert-count');
+  count.textContent = data.length + ' Active';
+  count.className = data.length > 0 ? 'alert-badge badge-critical' : 'alert-badge badge-success';
+
+  if (!data.length) {
+    list.innerHTML = '<div class="no-alerts">✅ All stock levels are healthy!</div>';
+    return;
+  }
+  list.innerHTML = data.map(a => `
+    <div class="alert-item">
+      <div class="alert-dot ${a.severity}"></div>
+      <div>
+        <div class="alert-product">${a.product}</div>
+        <div class="alert-msg">${a.message}</div>
+      </div>
+      <span class="alert-badge badge-${a.severity}">${a.severity.toUpperCase()}</span>
+      <span class="alert-time">${a.created_at}</span>
+    </div>
+  `).join('');
+}
+
+// ── Sync Inventory ────────────────────────────────────────────────────────────
+async function syncInventory() {
+  const btn = document.getElementById('btn-sync-inventory');
+  btn.textContent = '⏳ Syncing...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/inventory/sync/', { method: 'POST', headers: { 'Authorization': `Token ${AUTH_TOKEN}`, 'X-CSRFToken': getCookie('csrftoken') } });
+    const data = await res.json();
+    document.getElementById('last-sync').textContent = `Last sync: ${new Date().toLocaleTimeString()}`;
+    await loadKPIs();
+    await loadAlerts();
+  } finally {
+    btn.textContent = '⚡ Sync Inventory';
+    btn.disabled = false;
+  }
+}
+
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return '';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+
+(async function init() {
+  await Promise.all([loadKPIs(), loadRevenueTrend(7), loadTopProducts(), loadCategoryChart(), loadAlerts()]);
+  // Auto-refresh alerts every 60s
+  setInterval(loadAlerts, 60000);
+})();
+</script>
+{% endblock %}

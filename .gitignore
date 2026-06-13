@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.env
+db.sqlite3
+*.log
+media/
+staticfiles/
+forecasting/trained_models/*.joblib
+forecasting/trained_models/*.pkl
+.DS_Store
