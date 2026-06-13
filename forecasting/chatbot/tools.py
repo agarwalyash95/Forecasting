@@ -3,8 +3,8 @@ LangGraph tool definitions for the RetailIQ chatbot agent.
 Each tool queries the forecasting engine and returns structured data.
 """
 import json
-import logging
 from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 from forecasting.engine import (
     forecast_demand, get_summary_kpis, get_sales_trend,
     get_revenue_trend, get_top_products, get_category_distribution,
@@ -114,6 +114,35 @@ def tool_get_reorder_recommendations() -> str:
     return json.dumps(recs, default=str)
 
 
+@tool
+def tool_update_item_quantity(product_name: str, quantity: int, config: RunnableConfig) -> str:
+    """
+    Update the inventory stock level for a specific product manually.
+    Only use this if the user explicitly asks to update or set the quantity/stock.
+    """
+    is_admin = config.get("configurable", {}).get("is_admin", False)
+    if not is_admin:
+        return "Permission Denied: Only administrators can update inventory quantities."
+        
+    from forecasting.models import Product, InventoryLog
+    product = Product.objects.filter(name__icontains=product_name, is_active=True).first()
+    if not product:
+        return f"Product '{product_name}' not found."
+        
+    old_stock = product.stock
+    product.stock = quantity
+    product.save(update_fields=['stock'])
+    
+    InventoryLog.objects.create(
+        product=product,
+        stock_level=quantity,
+        change_amount=quantity - old_stock,
+        change_type='adjustment',
+        source='chatbot_manual'
+    )
+    return f"Successfully updated '{product.name}' stock from {old_stock} to {quantity}."
+
+
 ALL_TOOLS = [
     tool_forecast_demand,
     tool_get_kpis,
@@ -124,4 +153,5 @@ ALL_TOOLS = [
     tool_get_items_running_out,
     tool_get_inventory_snapshot,
     tool_get_reorder_recommendations,
+    tool_update_item_quantity,
 ]

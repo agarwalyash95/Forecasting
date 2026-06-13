@@ -44,7 +44,7 @@ class ChatResponse:
     session_id: Optional[int] = field(default=None)
 
 
-def generate_response(user_message: str, session_id: int = None) -> ChatResponse:
+def generate_response(user_message: str, session_id: int = None, is_admin: bool = False) -> ChatResponse:
     """
     Main entry point for the chatbot.
     Loads session history, invokes LangGraph ReAct agent, saves messages.
@@ -69,7 +69,10 @@ def generate_response(user_message: str, session_id: int = None) -> ChatResponse
     # ── Invoke agent ─────────────────────────────────────────────────────────
     chart_config = None
     try:
-        response = agent.invoke({'messages': messages})
+        response = agent.invoke(
+            {'messages': messages},
+            config={"configurable": {"is_admin": is_admin}}
+        )
         result_text = response['messages'][-1].content
 
         # Check if forecast was run — if so, generate chart config

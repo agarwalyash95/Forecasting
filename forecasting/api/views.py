@@ -64,7 +64,8 @@ class ChatbotView(APIView):
             session_id = get_or_create_session(request.user)
 
         from forecasting.chatbot.agent import generate_response
-        chat_response = generate_response(user_message, session_id=session_id)
+        is_admin = request.user.is_authenticated and request.user.is_staff
+        chat_response = generate_response(user_message, session_id=session_id, is_admin=is_admin)
 
         return Response({
             'text':         chat_response.text,
