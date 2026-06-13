@@ -13,8 +13,8 @@
     <div id="session-list">
       {% for session in sessions %}
       <a href="?session_id={{ session.id }}"
-         class="chat-session-item {% if current_session_id == session.id|stringformat:'s' %}active{% endif %}"
-         id="session-{{ session.id }}">
+        class="chat-session-item {% if current_session_id == session.id|stringformat:'s' %}active{% endif %}"
+        id="session-{{ session.id }}">
         {{ session.title|truncatechars:30 }}
       </a>
       {% empty %}
@@ -23,11 +23,16 @@
     </div>
 
     <!-- Quick action buttons -->
-    <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:0.4rem;">
-      <button class="quick-prompt-btn" style="width:100%;text-align:left;" onclick="sendQuick('Show me overall KPIs for last 30 days')">📊 KPI Summary</button>
-      <button class="quick-prompt-btn" style="width:100%;text-align:left;" onclick="sendQuick('What are the active stock alerts?')">🔔 Stock Alerts</button>
-      <button class="quick-prompt-btn" style="width:100%;text-align:left;" onclick="sendQuick('Which products are running out of stock in 14 days?')">⚠️ Running Out</button>
-      <button class="quick-prompt-btn" style="width:100%;text-align:left;" onclick="sendQuick('Show top 10 best-selling products this month')">🏆 Top Products</button>
+    <div
+      style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:0.4rem;">
+      <button class="quick-prompt-btn" style="width:100%;text-align:left;"
+        onclick="sendQuick('Show me overall KPIs for last 30 days')">📊 KPI Summary</button>
+      <button class="quick-prompt-btn" style="width:100%;text-align:left;"
+        onclick="sendQuick('What are the active stock alerts?')">🔔 Stock Alerts</button>
+      <button class="quick-prompt-btn" style="width:100%;text-align:left;"
+        onclick="sendQuick('Which products are running out of stock in 14 days?')">⚠️ Running Out</button>
+      <button class="quick-prompt-btn" style="width:100%;text-align:left;"
+        onclick="sendQuick('Show top 10 best-selling products this month')">🏆 Top Products</button>
     </div>
   </div>
 
@@ -40,7 +45,7 @@
         <div class="chat-header-name">RetailIQ Assistant</div>
         <div class="chat-header-status">
           <div class="status-dot"></div>
-          Powered by Gemini · gemini-2.5-flash · Prophet Forecasting
+          Powered by Gemini · gemini-3.1-pro-preview· Prophet Forecasting
         </div>
       </div>
       <div style="margin-left:auto;font-size:0.8rem;color:var(--text-muted);">
@@ -72,21 +77,21 @@
     <!-- Input Area -->
     <div class="chat-input-area">
       <div class="quick-prompts">
-        <button class="quick-prompt-btn" onclick="sendQuick('Forecast demand for Wireless Headphones for next 30 days')">📈 Forecast Headphones</button>
-        <button class="quick-prompt-btn" onclick="sendQuick('What products need to be reordered now?')">🛒 Reorder List</button>
-        <button class="quick-prompt-btn" onclick="sendQuick('Show category sales distribution for last 30 days')">🥧 Category Split</button>
-        <button class="quick-prompt-btn" onclick="sendQuick('Get current inventory snapshot from the live system')">📦 Live Stock</button>
+        <button class="quick-prompt-btn"
+          onclick="sendQuick('Forecast demand for Wireless Headphones for next 30 days')">📈 Forecast
+          Headphones</button>
+        <button class="quick-prompt-btn" onclick="sendQuick('What products need to be reordered now?')">🛒 Reorder
+          List</button>
+        <button class="quick-prompt-btn" onclick="sendQuick('Show category sales distribution for last 30 days')">🥧
+          Category Split</button>
+        <button class="quick-prompt-btn" onclick="sendQuick('Get current inventory snapshot from the live system')">📦
+          Live Stock</button>
       </div>
 
       <form class="chat-input-form" id="chat-form" onsubmit="sendMessage(event)">
-        <textarea
-          class="chat-input"
-          id="chat-input"
-          placeholder="Ask anything about your inventory, demand forecasts, or sales trends..."
-          rows="1"
-          onkeydown="handleKey(event)"
-          oninput="autoResize(this)"
-        ></textarea>
+        <textarea class="chat-input" id="chat-input"
+          placeholder="Ask anything about your inventory, demand forecasts, or sales trends..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
         <button type="submit" class="btn-send" id="btn-send" title="Send message">➤</button>
       </form>
     </div>
@@ -94,97 +99,97 @@
 </div>
 
 <script>
-const AUTH_TOKEN = '{{ auth_token }}';
-let currentSessionId = {{ current_session_id|default:"null" }};
-let isLoading = false;
-let chartCounter = 0;
+  const AUTH_TOKEN = '{{ auth_token }}';
+  let currentSessionId = {{ current_session_id|default:"null" }};
+  let isLoading = false;
+  let chartCounter = 0;
 
-// ── Load existing messages ────────────────────────────────────────────────────
-const existingMessages = {{ messages_json|safe }};
-if (existingMessages.length > 0) {
-  document.getElementById('welcome-msg').style.display = 'none';
-  existingMessages.forEach(msg => appendMessage(msg.sender, msg.text, msg.chart_config, msg.created_at));
-}
-scrollBottom();
-
-// ── Send message ──────────────────────────────────────────────────────────────
-async function sendMessage(e) {
-  if (e) e.preventDefault();
-  if (isLoading) return;
-
-  const input = document.getElementById('chat-input');
-  const text  = input.value.trim();
-  if (!text) return;
-
-  input.value = '';
-  autoResize(input);
-
-  document.getElementById('welcome-msg').style.display = 'none';
-  appendMessage('user', text);
-  showTyping();
-
-  isLoading = true;
-  document.getElementById('btn-send').disabled = true;
-
-  try {
-    const res = await fetch('/api/chat/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Token ${AUTH_TOKEN}`,
-        'X-CSRFToken': getCookie('csrftoken'),
-      },
-      body: JSON.stringify({ message: text, session_id: currentSessionId })
-    });
-
-    const data = await res.json();
-    removeTyping();
-
-    if (data.session_id && !currentSessionId) {
-      currentSessionId = data.session_id;
-      document.getElementById('current-session-id').textContent = data.session_id;
-    }
-
-    appendMessage('bot', data.text, data.chart_config);
-  } catch (err) {
-    removeTyping();
-    appendMessage('bot', '⚠️ Connection error. Please check your network and try again.');
-  } finally {
-    isLoading = false;
-    document.getElementById('btn-send').disabled = false;
+  // ── Load existing messages ────────────────────────────────────────────────────
+  const existingMessages = {{ messages_json| safe }};
+  if (existingMessages.length > 0) {
+    document.getElementById('welcome-msg').style.display = 'none';
+    existingMessages.forEach(msg => appendMessage(msg.sender, msg.text, msg.chart_config, msg.created_at));
   }
-}
+  scrollBottom();
 
-function sendQuick(text) {
-  document.getElementById('chat-input').value = text;
-  sendMessage(null);
-}
+  // ── Send message ──────────────────────────────────────────────────────────────
+  async function sendMessage(e) {
+    if (e) e.preventDefault();
+    if (isLoading) return;
 
-// ── Append message to DOM ─────────────────────────────────────────────────────
-function appendMessage(sender, text, chartConfig = null, timestamp = null) {
-  const messages = document.getElementById('chat-messages');
-  const row = document.createElement('div');
-  row.className = `message-row ${sender}`;
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
 
-  const avatar = sender === 'bot' ? '🤖' : '👤';
-  const time = timestamp ? new Date(timestamp).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) : new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+    input.value = '';
+    autoResize(input);
 
-  const renderedText = sender === 'bot'
-    ? marked.parse(text || '')
-    : escapeHtml(text);
+    document.getElementById('welcome-msg').style.display = 'none';
+    appendMessage('user', text);
+    showTyping();
 
-  // Chart.js inline chart
-  let chartHtml = '';
-  if (chartConfig && sender === 'bot') {
-    chartCounter++;
-    chartHtml = `
+    isLoading = true;
+    document.getElementById('btn-send').disabled = true;
+
+    try {
+      const res = await fetch('/api/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${AUTH_TOKEN}`,
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ message: text, session_id: currentSessionId })
+      });
+
+      const data = await res.json();
+      removeTyping();
+
+      if (data.session_id && !currentSessionId) {
+        currentSessionId = data.session_id;
+        document.getElementById('current-session-id').textContent = data.session_id;
+      }
+
+      appendMessage('bot', data.text, data.chart_config);
+    } catch (err) {
+      removeTyping();
+      appendMessage('bot', '⚠️ Connection error. Please check your network and try again.');
+    } finally {
+      isLoading = false;
+      document.getElementById('btn-send').disabled = false;
+    }
+  }
+
+  function sendQuick(text) {
+    document.getElementById('chat-input').value = text;
+    sendMessage(null);
+  }
+
+  // ── Append message to DOM ─────────────────────────────────────────────────────
+  function appendMessage(sender, text, chartConfig = null, timestamp = null) {
+    const messages = document.getElementById('chat-messages');
+    const row = document.createElement('div');
+    row.className = `message-row ${sender}`;
+
+    const avatar = sender === 'bot' ? '🤖' : '👤';
+    const time = timestamp ? new Date(timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+    const renderedText = sender === 'bot'
+      ? marked.parse(text || '')
+      : escapeHtml(text);
+
+    // Chart.js inline chart
+    let chartHtml = '';
+    if (chartConfig && sender === 'bot') {
+      chartCounter++;
+      chartHtml = `
       <div class="message-chart-container">
         <canvas id="inline-chart-${chartCounter}" height="200"></canvas>
       </div>
     `;
-  }
+    }
 
-  row.innerHTML = `
+    row.innerHTML = `
     <div class="message-avatar ${sender}">${avatar}</div>
     <div>
       <div class="message-bubble">${renderedText}${chartHtml}</div>
@@ -192,26 +197,26 @@ function appendMessage(sender, text, chartConfig = null, timestamp = null) {
     </div>
   `;
 
-  messages.appendChild(row);
+    messages.appendChild(row);
 
-  // Render chart after DOM insertion
-  if (chartConfig && chartCounter > 0) {
-    setTimeout(() => {
-      const canvas = document.getElementById(`inline-chart-${chartCounter}`);
-      if (canvas) new Chart(canvas.getContext('2d'), chartConfig);
-    }, 50);
+    // Render chart after DOM insertion
+    if (chartConfig && chartCounter > 0) {
+      setTimeout(() => {
+        const canvas = document.getElementById(`inline-chart-${chartCounter}`);
+        if (canvas) new Chart(canvas.getContext('2d'), chartConfig);
+      }, 50);
+    }
+
+    scrollBottom();
   }
 
-  scrollBottom();
-}
-
-// ── Typing indicator ──────────────────────────────────────────────────────────
-function showTyping() {
-  const messages = document.getElementById('chat-messages');
-  const el = document.createElement('div');
-  el.className = 'message-row bot';
-  el.id = 'typing-indicator';
-  el.innerHTML = `
+  // ── Typing indicator ──────────────────────────────────────────────────────────
+  function showTyping() {
+    const messages = document.getElementById('chat-messages');
+    const el = document.createElement('div');
+    el.className = 'message-row bot';
+    el.id = 'typing-indicator';
+    el.innerHTML = `
     <div class="message-avatar bot">🤖</div>
     <div class="message-bubble">
       <div class="typing-indicator">
@@ -221,29 +226,29 @@ function showTyping() {
       </div>
     </div>
   `;
-  messages.appendChild(el);
-  scrollBottom();
-}
+    messages.appendChild(el);
+    scrollBottom();
+  }
 
-function removeTyping() {
-  const el = document.getElementById('typing-indicator');
-  if (el) el.remove();
-}
+  function removeTyping() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
 
-// ── New session ───────────────────────────────────────────────────────────────
-async function newSession() {
-  currentSessionId = null;
-  document.getElementById('current-session-id').textContent = '—';
-  document.getElementById('chat-messages').innerHTML = '';
-  document.getElementById('welcome-msg') && (document.getElementById('chat-messages').appendChild(createWelcome()));
-  scrollBottom();
-}
+  // ── New session ───────────────────────────────────────────────────────────────
+  async function newSession() {
+    currentSessionId = null;
+    document.getElementById('current-session-id').textContent = '—';
+    document.getElementById('chat-messages').innerHTML = '';
+    document.getElementById('welcome-msg') && (document.getElementById('chat-messages').appendChild(createWelcome()));
+    scrollBottom();
+  }
 
-function createWelcome() {
-  const div = document.createElement('div');
-  div.className = 'message-row bot';
-  div.id = 'welcome-msg';
-  div.innerHTML = `
+  function createWelcome() {
+    const div = document.createElement('div');
+    div.className = 'message-row bot';
+    div.id = 'welcome-msg';
+    div.innerHTML = `
     <div class="message-avatar bot">🤖</div>
     <div>
       <div class="message-bubble">
@@ -251,40 +256,40 @@ function createWelcome() {
       </div>
     </div>
   `;
-  return div;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function scrollBottom() {
-  const msgs = document.getElementById('chat-messages');
-  setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
-}
-
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage(null);
+    return div;
   }
-}
 
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function scrollBottom() {
+    const msgs = document.getElementById('chat-messages');
+    setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
+  }
 
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(null);
+    }
+  }
 
-function getCookie(name) {
-  const v = `; ${document.cookie}`;
-  const p = v.split(`; ${name}=`);
-  if (p.length === 2) return p.pop().split(';').shift();
-  return '';
-}
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
 
-// Chart defaults
-Chart.defaults.color = '#94a3b8';
-Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function getCookie(name) {
+    const v = `; ${document.cookie}`;
+    const p = v.split(`; ${name}=`);
+    if (p.length === 2) return p.pop().split(';').shift();
+    return '';
+  }
+
+  // Chart defaults
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
 </script>
 {% endblock %}
