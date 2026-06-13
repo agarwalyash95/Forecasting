@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 import numpy as np
+# pyrefly: ignore [missing-import]
 from django.conf import settings
 
 warnings.filterwarnings('ignore')
