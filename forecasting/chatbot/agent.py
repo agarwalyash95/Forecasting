@@ -51,8 +51,8 @@ def generate_response(user_message: str, session_id: int = None, is_admin: bool 
     Main entry point for the chatbot.
     Loads session history, invokes LangGraph ReAct agent, saves messages.
     """
-    api_key   = getattr(settings, 'GEMINI_API_KEY', 'AIzaSyDTTMl0SPdDDcspjQiujdjvrU1iog0PfS8')
-    model_name = getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-flash')
+    api_key   = getattr(settings, 'GEMINI_API_KEY', '')
+    model_name = getattr(settings, 'GEMINI_MODEL', 'gemini-3.1-pro-preview')
 
     if not api_key:
         return ChatResponse(text="⚠️ Error: API Key is not configured.")
