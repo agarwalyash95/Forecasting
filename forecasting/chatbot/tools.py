@@ -143,6 +143,76 @@ def tool_update_item_quantity(product_name: str, quantity: int, config: Runnable
     )
     return f"Successfully updated '{product.name}' stock from {old_stock} to {quantity}."
 
+@tool
+def tool_get_database_schema() -> str:
+    """
+    Get the complete database schema including all tables and columns.
+    Use this to understand the database structure before writing raw SQL queries.
+    """
+    from django.db import connection
+    
+    schema_info = []
+    with connection.cursor() as cursor:
+        tables = connection.introspection.table_names(cursor)
+        for table in tables:
+            # Note: We omit system tables to save context space if desired, but we can return all.
+            if table.startswith('django_') or table.startswith('auth_'):
+                continue
+                
+            try:
+                relations = connection.introspection.get_relations(cursor, table)
+                desc = connection.introspection.get_table_description(cursor, table)
+                
+                columns = []
+                for col in desc:
+                    col_name = col.name
+                    col_type = col.type_code
+                    columns.append(f"{col_name} ({col_type})")
+                    
+                schema_info.append(f"Table: {table}\\nColumns: {', '.join(columns)}")
+            except Exception as e:
+                logger.warning(f"Failed to get schema for {table}: {e}")
+                
+    return "\\n\\n".join(schema_info)
+
+
+@tool
+def tool_execute_sql(query: str, config: RunnableConfig) -> str:
+    """
+    Execute a raw SQL query against the database.
+    WARNING: Only use this for complex queries that the other tools cannot handle,
+    or if the user explicitly asks to fetch or update specific data directly.
+    """
+    is_admin = config.get("configurable", {}).get("is_admin", False)
+    if not is_admin:
+        return "Permission Denied: Only administrators can execute raw SQL queries."
+        
+    from django.db import connection
+    
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            
+            # If it's a SELECT query, fetch and return results
+            if query.strip().upper().startswith('SELECT'):
+                columns = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                # Limit to 50 rows to prevent context overflow
+                if len(rows) > 50:
+                    rows = rows[:50]
+                    warning = "\\n(Note: Results truncated to 50 rows)"
+                else:
+                    warning = ""
+                    
+                result = [dict(zip(columns, row)) for row in rows]
+                return json.dumps(result, default=str) + warning
+            else:
+                # For UPDATE, INSERT, DELETE
+                connection.commit()
+                return f"Query executed successfully. Rows affected: {cursor.rowcount}"
+    except Exception as e:
+        return f"SQL Execution Error: {str(e)}"
+
 
 ALL_TOOLS = [
     tool_forecast_demand,
@@ -155,4 +225,6 @@ ALL_TOOLS = [
     tool_get_inventory_snapshot,
     tool_get_reorder_recommendations,
     tool_update_item_quantity,
+    tool_get_database_schema,
+    tool_execute_sql,
 ]
