@@ -12,7 +12,7 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,*').split(',')
 
 CSRF_TRUSTED_ORIGINS = [
-    # Add your new Azure site URL here once it is created
+    'https://djangolearning-akf3bmh6eqauf2aq.centralindia-01.azurewebsites.net'
 ]
 
 INSTALLED_APPS = [
