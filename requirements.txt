@@ -13,6 +13,7 @@ scikit-learn==1.6.1
 joblib==1.4.2
 prophet==1.1.6
 holidays==0.61
+statsforecast==1.7.6
 djangorestframework-simplejwt==5.3.1
 django-cors-headers==4.7.0
 Pillow==11.2.1
