@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from django.conf import settings
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
 
@@ -49,13 +49,13 @@ def generate_response(user_message: str, session_id: int = None, is_admin: bool 
     Main entry point for the chatbot.
     Loads session history, invokes LangGraph ReAct agent, saves messages.
     """
-    api_key   = getattr(settings, 'GROQ_API_KEY', '')
-    model_name = getattr(settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile')
+    api_key   = getattr(settings, 'GEMINI_API_KEY', 'AIzaSyDTTMl0SPdDDcspjQiujdjvrU1iog0PfS8')
+    model_name = getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-flash')
 
     if not api_key:
-        return ChatResponse(text="⚠️ Error: GROQ_API_KEY is not configured. Please add it to your .env file.")
+        return ChatResponse(text="⚠️ Error: API Key is not configured.")
 
-    llm = ChatGroq(temperature=0.1, groq_api_key=api_key, model_name=model_name)
+    llm = ChatGoogleGenerativeAI(temperature=0.1, google_api_key=api_key, model=model_name)
     agent = create_react_agent(llm, tools=ALL_TOOLS)
 
     # ── Build message history ─────────────────────────────────────────────────
