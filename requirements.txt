@@ -5,15 +5,14 @@ cryptography==44.0.3
 python-decouple==3.8
 langchain==0.3.25
 langchain-groq==0.3.2
-langchain-core==0.3.61
-langgraph==0.4.7
+langchain-core>=0.3.75
+langgraph>=0.2.28
 pandas==2.2.3
 numpy==2.2.3
 scikit-learn==1.6.1
 joblib==1.4.2
 prophet==1.1.6
 holidays==0.61
-statsforecast==1.7.6
 djangorestframework-simplejwt==5.3.1
 django-cors-headers==4.7.0
 Pillow==11.2.1
