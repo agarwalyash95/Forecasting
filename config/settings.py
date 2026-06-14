@@ -2,6 +2,11 @@
 Django settings for Retail Inventory Demand Forecasting Chatbot.
 """
 import os
+# Force-remove leaked keys from environment so python-decouple and langchain use the .env file
+for key in ["GOOGLE_API_KEY", "GEMINI_API_KEY"]:
+    if key in os.environ:
+        del os.environ[key]
+
 from pathlib import Path
 from decouple import config
 

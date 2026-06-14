@@ -8,6 +8,7 @@ urlpatterns = [
     # ── Chatbot ───────────────────────────────────────────────────────────────
     path('chat/', views.ChatbotView.as_view(), name='api-chat'),
     path('chat/new-session/', views.NewSessionView.as_view(), name='api-new-session'),
+    path('chat/<int:pk>/', views.DeleteSessionView.as_view(), name='api-delete-session'),
 
     # ── KPIs & Trends ─────────────────────────────────────────────────────────
     path('kpis/', views.KPIView.as_view(), name='api-kpis'),

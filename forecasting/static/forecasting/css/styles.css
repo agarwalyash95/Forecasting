@@ -544,6 +544,7 @@ body {
 
 .message-row { display: flex; gap: 0.75rem; max-width: 85%; }
 .message-row.user { flex-direction: row-reverse; margin-left: auto; }
+.message-row > div:not(.message-avatar) { min-width: 0; }
 
 .message-avatar {
   width: 34px; height: 34px;
@@ -568,6 +569,9 @@ body {
   line-height: 1.6;
   color: var(--text-primary);
   max-width: 100%;
+  overflow-x: auto;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .message-row.user .message-bubble {
@@ -581,6 +585,33 @@ body {
 .message-bubble code { background: rgba(99,102,241,0.1); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.85em; }
 .message-bubble ul, .message-bubble ol { padding-left: 1.25rem; margin: 0.5em 0; }
 .message-bubble li { margin-bottom: 0.25em; }
+
+.message-bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.message-bubble th, .message-bubble td {
+  border: 1px solid var(--border);
+  padding: 0.5rem;
+  text-align: left;
+}
+.message-bubble th {
+  background: var(--bg-secondary);
+}
+
+.message-bubble pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background: rgba(99,102,241,0.05);
+  padding: 0.8rem;
+  border-radius: 8px;
+}
 
 .message-time { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.35rem; }
 .message-row.user .message-time { text-align: right; }

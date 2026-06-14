@@ -51,7 +51,7 @@ def generate_response(user_message: str, session_id: int = None, is_admin: bool 
     Main entry point for the chatbot.
     Loads session history, invokes LangGraph ReAct agent, saves messages.
     """
-    api_key   = getattr(settings, 'GEMINI_API_KEY', '')
+    api_key   = getattr(settings, 'GEMINI_API_KEY', None)
     model_name = getattr(settings, 'GEMINI_MODEL', 'gemini-3.1-pro-preview')
 
     if not api_key:
@@ -75,7 +75,11 @@ def generate_response(user_message: str, session_id: int = None, is_admin: bool 
             {'messages': messages},
             config={"configurable": {"is_admin": is_admin}}
         )
-        result_text = response['messages'][-1].content
+        raw_content = response['messages'][-1].content
+        if isinstance(raw_content, list):
+            result_text = "".join(block.get("text", "") for block in raw_content if isinstance(block, dict) and block.get("type") == "text")
+        else:
+            result_text = str(raw_content)
 
         # Check if forecast was run — if so, generate chart config
         chart_config = _extract_chart_config(user_message)

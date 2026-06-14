@@ -60,8 +60,8 @@ class ChatbotView(APIView):
 
         # Create session if not provided
         if not session_id and request.user.is_authenticated:
-            from forecasting.chatbot.agent import get_or_create_session
-            session_id = get_or_create_session(request.user)
+            from forecasting.chatbot.agent import create_new_session
+            session_id = create_new_session(request.user)
 
         from forecasting.chatbot.agent import generate_response
         is_admin = request.user.is_authenticated and request.user.is_staff
@@ -82,6 +82,19 @@ class NewSessionView(APIView):
         from forecasting.chatbot.agent import create_new_session
         session_id = create_new_session(request.user)
         return Response({'session_id': session_id})
+
+
+class DeleteSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        from forecasting.models import ChatSession
+        try:
+            session = ChatSession.objects.get(pk=pk, user=request.user)
+            session.delete()
+            return Response({"status": "deleted"})
+        except ChatSession.DoesNotExist:
+            return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 # ─── KPIs & Analytics ─────────────────────────────────────────────────────────

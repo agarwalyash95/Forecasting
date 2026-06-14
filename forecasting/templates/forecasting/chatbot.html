@@ -3,6 +3,57 @@
 
 {% block title %}AI Chatbot — RetailIQ{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* Enforce structural bounds so flex layout cannot be stretched by tables/text */
+  .main-content {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .chatbot-layout {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .chat-main { 
+    min-width: 0 !important; 
+    max-width: 100% !important;
+  }
+  .chat-messages {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .message-row {
+    max-width: 90% !important;
+  }
+  .message-row > div:not(.message-avatar) {
+    min-width: 0 !important;
+    flex: 1;
+  }
+  .message-bubble {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+  .message-bubble table {
+    display: block !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+  }
+  .message-bubble pre {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="chatbot-layout">
 
@@ -12,11 +63,14 @@
     <p class="chat-history-title">Recent Chats</p>
     <div id="session-list">
       {% for session in sessions %}
-      <a href="?session_id={{ session.id }}"
-        class="chat-session-item {% if current_session_id == session.id|stringformat:'s' %}active{% endif %}"
-        id="session-{{ session.id }}">
-        {{ session.title|truncatechars:30 }}
-      </a>
+      <div class="chat-session-item-wrapper" style="display: flex; align-items: center; margin-bottom: 0.2rem;">
+        <a href="?session_id={{ session.id }}"
+          class="chat-session-item {% if current_session_id == session.id|stringformat:'s' %}active{% endif %}"
+          id="session-{{ session.id }}" style="flex: 1; margin-bottom: 0;">
+          {{ session.title|truncatechars:25 }}
+        </a>
+        <button onclick="deleteSession({{ session.id }})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0.5rem;" title="Delete session">🗑️</button>
+      </div>
       {% empty %}
       <p style="color:var(--text-muted);font-size:0.8rem;padding:0.5rem 0.25rem;">No sessions yet.</p>
       {% endfor %}
@@ -30,7 +84,7 @@
       <button class="quick-prompt-btn" style="width:100%;text-align:left;"
         onclick="sendQuick('What are the active stock alerts?')">🔔 Stock Alerts</button>
       <button class="quick-prompt-btn" style="width:100%;text-align:left;"
-        onclick="sendQuick('Which products are running out of stock in 14 days?')">⚠️ Running Out</button>
+        onclick="sendQuick('What products need to be reordered now?')">⚠️ Running Out</button>
       <button class="quick-prompt-btn" style="width:100%;text-align:left;"
         onclick="sendQuick('Show top 10 best-selling products this month')">🏆 Top Products</button>
     </div>
@@ -97,15 +151,18 @@
     </div>
   </div>
 </div>
+<!-- Hidden data for Javascript -->
+{{ messages|json_script:"messages-data" }}
 
 <script>
   const AUTH_TOKEN = '{{ auth_token }}';
-  let currentSessionId = {{ current_session_id|default:"null" }};
+  const sessionIdStr = '{{ current_session_id|default:"" }}';
+  let currentSessionId = sessionIdStr ? parseInt(sessionIdStr) : null;
   let isLoading = false;
   let chartCounter = 0;
 
   // ── Load existing messages ────────────────────────────────────────────────────
-  const existingMessages = {{ messages_json| safe }};
+  const existingMessages = JSON.parse(document.getElementById('messages-data').textContent);
   if (existingMessages.length > 0) {
     document.getElementById('welcome-msg').style.display = 'none';
     existingMessages.forEach(msg => appendMessage(msg.sender, msg.text, msg.chart_config, msg.created_at));
@@ -176,7 +233,7 @@
 
     const renderedText = sender === 'bot'
       ? marked.parse(text || '')
-      : escapeHtml(text);
+      : escapeHtml(text || '');
 
     // Chart.js inline chart
     let chartHtml = '';
@@ -202,8 +259,11 @@
     // Render chart after DOM insertion
     if (chartConfig && chartCounter > 0) {
       setTimeout(() => {
-        const canvas = document.getElementById(`inline-chart-${chartCounter}`);
-        if (canvas) new Chart(canvas.getContext('2d'), chartConfig);
+        try {
+          const canvas = document.getElementById(`inline-chart-${chartCounter}`);
+          let configObj = typeof chartConfig === 'string' ? JSON.parse(chartConfig) : chartConfig;
+          if (canvas) new Chart(canvas.getContext('2d'), configObj);
+        } catch (e) { console.error('Chart error:', e); }
       }, 50);
     }
 
@@ -236,12 +296,32 @@
   }
 
   // ── New session ───────────────────────────────────────────────────────────────
-  async function newSession() {
-    currentSessionId = null;
-    document.getElementById('current-session-id').textContent = '—';
-    document.getElementById('chat-messages').innerHTML = '';
-    document.getElementById('welcome-msg') && (document.getElementById('chat-messages').appendChild(createWelcome()));
-    scrollBottom();
+  function newSession() {
+    window.location.href = '/chatbot/';
+  }
+
+  async function deleteSession(sessionId) {
+    if (!confirm('Are you sure you want to delete this chat session?')) return;
+    try {
+      const response = await fetch(`/api/chat/${sessionId}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Token ${AUTH_TOKEN}`
+        }
+      });
+      if (response.ok) {
+        if (currentSessionId == sessionId) {
+          window.location.href = '/chatbot/';
+        } else {
+          window.location.reload();
+        }
+      } else {
+        alert('Failed to delete session.');
+      }
+    } catch (e) {
+      console.error('Delete error:', e);
+      alert('An error occurred.');
+    }
   }
 
   function createWelcome() {

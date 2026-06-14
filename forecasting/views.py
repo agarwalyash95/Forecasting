@@ -76,7 +76,7 @@ def logout_view(request):
 def dashboard(request):
     kpis   = get_summary_kpis(30)
     alerts = get_active_alerts()[:5]
-    token  = request.session.get('auth_token', '')
+    token, _ = Token.objects.get_or_create(user=request.user)
     
     pending_users = []
     if request.user.is_superuser:
@@ -85,7 +85,7 @@ def dashboard(request):
     return render(request, 'forecasting/dashboard.html', {
         'kpis': kpis,
         'alerts': alerts,
-        'auth_token': token,
+        'auth_token': token.key,
         'pending_users': pending_users,
     })
 
@@ -124,10 +124,10 @@ def chatbot_view(request):
             messages = list(session.messages.order_by('created_at').values('sender', 'text', 'chart_config', 'created_at'))
         except ChatSession.DoesNotExist:
             pass
-    token = request.session.get('auth_token', '')
+    token, _ = Token.objects.get_or_create(user=request.user)
     return render(request, 'forecasting/chatbot.html', {
         'sessions': sessions,
         'current_session_id': current_session_id,
-        'messages_json': json.dumps(messages, default=str),
-        'auth_token': token,
+        'messages': messages,
+        'auth_token': token.key,
     })
